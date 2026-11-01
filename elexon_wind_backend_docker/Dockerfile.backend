@@ -1,0 +1,26 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system build dependencies for psycopg2 and scientific libraries
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libpq-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
+
+COPY wind_procurement_model.pkl /app/wind_procurement_model.pkl
+COPY workflow.md /app/workflow.md
+COPY data /app/data
+COPY backend /app/backend
+
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+
+EXPOSE 8000
+
+# Seed PostgreSQL, run the automated production verification suite, and launch Uvicorn on port 8000
+CMD ["sh", "-c", "python3 -m backend.db.seed_db && python3 -m unittest backend.tests.test_production_suite -v && uvicorn backend.main:app --host 0.0.0.0 --port 8000"]
