@@ -13,6 +13,17 @@ DATABASE_URL = os.getenv(
     "DATABASE_URL",
     "postgresql://postgres:postgres@localhost:5433/wind_procurement",
 )
+
+# When DATABASE_URL is unreachable the app degrades to the local SQLite replica so
+# that local development keeps working. In production that fallback is dangerous:
+# the service stays "healthy" while writing to an ephemeral disk. Set
+# ALLOW_SQLITE_FALLBACK=false there so a bad DATABASE_URL fails loudly instead.
+ALLOW_SQLITE_FALLBACK = os.getenv("ALLOW_SQLITE_FALLBACK", "true").strip().lower() not in (
+    "0",
+    "false",
+    "no",
+    "off",
+)
 SQLITE_FALLBACK_PATH = os.path.join(DATA_DIR, "wind_procurement.db")
 
 MODEL_PKL_PATH = os.getenv(

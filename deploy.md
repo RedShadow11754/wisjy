@@ -124,12 +124,14 @@ With no `DATABASE_URL`, `backend/db/database.py` falls back to SQLite at `data/w
 * Writes from live Elexon ingest (`POST /api/v1/ingestion/sync-date`) live only until the next restart.
 * SQLite writes are safe here because the API is a single instance; do not scale the service above one instance on SQLite.
 
-**To use a managed Postgres instead** (needed if you want ingested dates to survive restarts):
+**To use a managed Postgres instead** (needed if you want ingested dates to survive restarts): follow
+**[`guide_redeploy.md`](guide_redeploy.md)**. It creates the Render Postgres instance, injects
+`DATABASE_URL` through `fromDatabase`, sets `ALLOW_SQLITE_FALLBACK=false` so the app can no longer
+silently degrade to SQLite, and verifies that `engine` actually flipped to `postgresql`.
 
-1. Create a database — Render Postgres, or a free Neon/Supabase instance. Render's free Postgres plans are time-limited, so a free Neon database is often the pragmatic choice for a long-lived demo.
-2. Copy the **internal** connection string (Render Postgres) or the pooled URI (Neon). It must start with `postgresql://`.
-3. Add it to the service as `DATABASE_URL` and redeploy. The app seeds Postgres from the same CSVs on boot; `engine` in the health payload flips to `postgresql`.
-4. If the connection drops at any point, the app silently falls back to SQLite — `engine` in `/api/v1/system/health` is how you confirm which backend is live.
+Short version: create the database in the **same region** as the service, set `DATABASE_URL` to its
+**internal** connection string, redeploy. No data migration is needed — Postgres is seeded from the
+same CSV files that SQLite was.
 
 ---
 
@@ -204,7 +206,7 @@ CORS does not affect `curl`, Swagger UI, or server-to-server calls; it is purely
 | Chart empty for a date | Date outside `2025-08-01 … 2026-01-31` and Elexon has no live data | Pick a date in coverage, or `POST /api/v1/ingestion/sync-date` for a recent date. |
 | `500` on health right after boot | Seed finished but WRITE failing (read-only/locked DB) | Check logs for `sqlite3.OperationalError`; restart the service. |
 | Render build fails at `pip install` | Native wheel build (rare, usually `psycopg2`) | Logs show the failing package; `libpq-dev`/`gcc` are already installed in the Dockerfile — retry the build to rule out a transient index error. |
-| Every deploy re-seeds for minutes | Expected with SQLite | Use a managed Postgres (§2.5) to avoid the re-seed cost. |
+| Every deploy re-seeds for minutes | Expected with SQLite | Move to managed Postgres — see [`guide_redeploy.md`](guide_redeploy.md). |
 
 ---
 

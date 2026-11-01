@@ -9,6 +9,7 @@ Seeds:
     from `data/raw_fuelhh_stream.csv` (4,416 hourly slots across Aug 2025 – Jan 2026).
 """
 
+import argparse
 import csv
 import os
 from typing import Any, Dict
@@ -188,5 +189,18 @@ def seed_database(force_reseed: bool = False) -> Dict[str, Any]:
 
 
 if __name__ == "__main__":
-    res = seed_database(force_reseed=True)
-    print(f"[Database Seed Complete] {res}")
+    # The Docker image runs this module on every container start. With a persistent
+    # database (Render Postgres, Neon, Supabase) a forced reseed would DROP and
+    # reload both tables on every deploy and every wake-from-sleep, so force is
+    # opt-in via `--force`:
+    #     python3 -m backend.db.seed_db --force
+    parser = argparse.ArgumentParser(description="Seed raw Elexon streams into the database.")
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Drop both tables and reload every row. Destructive: wipes rows added by live sync.",
+    )
+    args = parser.parse_args()
+
+    res = seed_database(force_reseed=args.force)
+    print(f"[Database Seed Complete] {res}", flush=True)

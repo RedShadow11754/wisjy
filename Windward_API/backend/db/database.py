@@ -5,9 +5,10 @@ with automatic local SQLite fallback when running outside Docker.
 
 import os
 import sqlite3
+import sys
 from typing import Any, Dict, Generator, List, Optional
 
-from backend.config import DATABASE_URL, SQLITE_FALLBACK_PATH
+from backend.config import ALLOW_SQLITE_FALLBACK, DATABASE_URL, SQLITE_FALLBACK_PATH
 
 
 class DatabaseConnection:
@@ -27,13 +28,32 @@ class DatabaseConnection:
         if DATABASE_URL.startswith("postgres"):
             try:
                 import psycopg2
-                import psycopg2.extras
 
-                self.pg_conn = psycopg2.connect(DATABASE_URL, connect_timeout=2)
+                # 10s covers TLS + the first connect to a managed instance, which can
+                # be slow right after it starts. A shorter timeout turns a cold
+                # database into a permanent silent fallback.
+                self.pg_conn = psycopg2.connect(
+                    DATABASE_URL,
+                    connect_timeout=10,
+                    application_name="windward-api",
+                )
                 self.engine_type = "postgresql"
                 return
-            except Exception:
+            except Exception as exc:
                 self.pg_conn = None
+                reason = f"{type(exc).__name__}: {exc}".strip()
+                if not ALLOW_SQLITE_FALLBACK:
+                    # Fail loudly: a service that silently writes to ephemeral SQLite
+                    # looks healthy while losing every write on restart.
+                    raise RuntimeError(
+                        "PostgreSQL connection failed and ALLOW_SQLITE_FALLBACK is disabled. "
+                        f"Check DATABASE_URL. {reason}"
+                    ) from exc
+                sys.stderr.write(
+                    "[database] WARNING: PostgreSQL unreachable, falling back to the local "
+                    f"SQLite replica ({SQLITE_FALLBACK_PATH}). {reason}\n"
+                )
+                sys.stderr.flush()
 
         os.makedirs(os.path.dirname(SQLITE_FALLBACK_PATH), exist_ok=True)
         self.sqlite_conn = sqlite3.connect(SQLITE_FALLBACK_PATH, check_same_thread=False)

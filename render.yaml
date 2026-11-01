@@ -1,6 +1,17 @@
-# Render Blueprint — deploys the FastAPI backend as a Docker web service.
-# Use this via Render Dashboard -> New + -> Blueprint, or create the service
-# manually with the same values (see deploy.md, Part 1).
+# Render Blueprint — deploys the FastAPI backend as a Docker web service plus a
+# managed PostgreSQL 16 instance. Deploy with Render Dashboard -> New + -> Blueprint;
+# after that, every change here is applied by syncing the blueprint (see
+# guide_redeploy.md for the one-time cutover to Postgres).
+#
+# The database and the web service MUST share a region: the internal connection
+# string Render injects only resolves inside the same region.
+databases:
+  - name: windward-db
+    databaseName: wind_procurement
+    user: windward
+    plan: free
+    region: oregon
+
 services:
   - type: web
     name: windward-api
@@ -12,6 +23,17 @@ services:
     healthCheckPath: /api/v1/system/health
     autoDeploy: true
     envVars:
+      # Injected by Render as postgresql://windward:<password>@<internal-host>/wind_procurement
+      # Do not paste this by hand; `fromDatabase` keeps it in sync with the instance.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: windward-db
+          property: connectionString
+      # Production must never quietly write to ephemeral SQLite. If the database
+      # is unreachable the container now fails to start instead of serving a
+      # healthy-looking API backed by a throwaway file.
+      - key: ALLOW_SQLITE_FALLBACK
+        value: "false"
       - key: MODEL_PKL_PATH
         value: /app/wind_procurement_model.pkl
       - key: ELEXON_API_BASE
