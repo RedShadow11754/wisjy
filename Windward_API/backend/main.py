@@ -16,6 +16,7 @@ Supports:
 
 import argparse
 import json
+import os
 import sys
 import time
 from contextlib import asynccontextmanager
@@ -59,12 +60,23 @@ try:
         lifespan=lifespan,
     )
 
+    # Comma-separated list of browser origins allowed to call the API, e.g.
+    #   CORS_ALLOW_ORIGINS="https://windward.vercel.app,https://windward.example.com"
+    # Defaults to "*" when unset or empty, so a freshly deployed frontend works
+    # before you lock the API down to your own domains.
+    _raw_origins = os.getenv("CORS_ALLOW_ORIGINS", "*").strip()
+    cors_allow_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()] or ["*"]
+    cors_allow_all = "*" in cors_allow_origins
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=True,
+        allow_origins=cors_allow_origins,
+        # A wildcard origin cannot be combined with credentialed (cookie) requests.
+        allow_credentials=not cors_allow_all,
         allow_methods=["*"],
         allow_headers=["*"],
+        # Required for the frontend to read the timing header across origins.
+        expose_headers=["X-Process-Time-Ms"],
     )
 
     @app.middleware("http")

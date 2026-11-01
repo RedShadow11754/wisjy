@@ -1,0 +1,22 @@
+# Render Blueprint — deploys the FastAPI backend as a Docker web service.
+# Use this via Render Dashboard -> New + -> Blueprint, or create the service
+# manually with the same values (see deploy.md, Part 1).
+services:
+  - type: web
+    name: windward-api
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerContext: ./Windward_API
+    dockerfilePath: ./Windward_API/Dockerfile.backend
+    healthCheckPath: /api/v1/system/health
+    autoDeploy: true
+    envVars:
+      - key: MODEL_PKL_PATH
+        value: /app/wind_procurement_model.pkl
+      - key: ELEXON_API_BASE
+        value: https://data.elexon.co.uk/bmrs/api/v1/datasets
+      # Set this to your Vercel URL after the frontend is deployed.
+      # Empty/unset means "allow any origin", which is fine for a demo.
+      - key: CORS_ALLOW_ORIGINS
+        sync: false

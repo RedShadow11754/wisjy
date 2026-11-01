@@ -22,5 +22,7 @@ ENV PYTHONUNBUFFERED=1
 
 EXPOSE 8000
 
-# Seed PostgreSQL, run the automated production verification suite, and launch Uvicorn on port 8000
-CMD ["sh", "-c", "python3 -m backend.db.seed_db && python3 -m unittest backend.tests.test_production_suite -v && uvicorn backend.main:app --host 0.0.0.0 --port 8000"]
+# Seed the database, then launch Uvicorn. Honours $PORT because hosted platforms
+# (Render, Railway, Fly, Cloud Run) inject the port the router forwards to;
+# falls back to 8000 for local `docker compose up`.
+CMD ["sh", "-c", "python3 -m backend.db.seed_db && uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

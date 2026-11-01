@@ -1,0 +1,15 @@
+# Local-only artifacts that must never be baked into the deployed image.
+# Note: these patterns are matched against the build context root, so
+# `backend/` is copied in full (including backend/tests/).
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+data/*.db
+data/*.db-journal
+*.zip
+.git/
+.gitignore
+.env
+.env.*
