@@ -4,6 +4,8 @@ UK Day-Ahead Wind Procurement dashboard. It takes the raw Elexon `WINDFOR` revis
 
 **Live app:** https://wisjy.vercel.app/
 
+**Backend endpoint:** https://windward-api.onrender.com
+
 ---
 
 ## Project layout
