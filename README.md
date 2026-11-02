@@ -14,7 +14,6 @@ UK Day-Ahead Wind Procurement dashboard. It takes the raw Elexon `WINDFOR` revis
 ├── render.yaml                  # Render Blueprint: Docker API + PostgreSQL 16
 │
 ├── Frontend/                    # React dashboard, deployed on Vercel
-│   ├── .figma/                  # Figma Make build/preview config
 │   ├── public/
 │   │   ├── assets/              # static SVG artwork
 │   │   └── favicon.svg
